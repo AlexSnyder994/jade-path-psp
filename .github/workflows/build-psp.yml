@@ -10,18 +10,39 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build with pspdev
+      - name: Install PSPDEV
         shell: bash
         run: |
-          docker run --rm \
-            -v "${GITHUB_WORKSPACE}:/src" \
-            -w /src \
-            pspdev/pspdev:latest make
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake pkgconf libusb-0.1-4 \
+            libarchive-tools fakeroot wget
+          sudo apt-get install -y libreadline8t64 libgpgme11t64 \
+            || sudo apt-get install -y libreadline8 libgpgme11
+
+          wget -q \
+            https://github.com/pspdev/pspdev/releases/latest/download/pspdev-ubuntu-latest-x86_64.tar.gz \
+            -O /tmp/pspdev.tar.gz
+          sudo rm -rf /opt/pspdev
+          sudo tar -xzf /tmp/pspdev.tar.gz -C /opt
+
+          echo "PSPDEV=/opt/pspdev" >> "$GITHUB_ENV"
+          echo "/opt/pspdev/bin" >> "$GITHUB_PATH"
+          export PATH="/opt/pspdev/bin:$PATH"
+          psp-config --pspdev-path
+          psp-gcc --version | head -n 1
+
+      - name: Build EBOOT
+        shell: bash
+        run: |
+          export PATH="/opt/pspdev/bin:$PATH"
+          make
 
       - name: Package PSP folder
         shell: bash
