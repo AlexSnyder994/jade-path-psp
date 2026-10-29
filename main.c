@@ -228,7 +228,7 @@ int main(int argc, char *argv[]) {
     }
 
     sceGuDisplay(GU_FALSE);
-    sceGuTerminate();
+    sceGuTerm();
     sceKernelExitGame();
     return 0;
 }
