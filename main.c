@@ -1,13 +1,13 @@
 /*
  * «Нефритовый путь» — PSP build smoke test.
  *
- * This is the first CI checkpoint for the native PSP port. It initialises the
- * GU, draws a landscape 7x7 board preview and exercises the D-pad / Cross /
- * Start controls. The same display pipeline will be used by the full game.
+ * Debug checkpoint: show a short text splash first, then initialise GU using
+ * the same framebuffer allocation style as the official PSPSDK GU samples.
  */
 
 #include <pspkernel.h>
 #include <pspctrl.h>
+#include <pspdebug.h>
 #include <pspdisplay.h>
 #include <pspgu.h>
 #include <pspgum.h>
@@ -16,8 +16,8 @@
 #include <stdio.h>
 
 PSP_MODULE_INFO("JadePath", 0, 1, 0);
-PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
-PSP_HEAP_SIZE_KB(16 * 1024);
+PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER);
+PSP_HEAP_SIZE_KB(4 * 1024);
 
 #define SCREEN_WIDTH 480
 #define SCREEN_HEIGHT 272
@@ -28,7 +28,6 @@ PSP_HEAP_SIZE_KB(16 * 1024);
 #define COLOR_INK ABGR(4, 17, 20)
 #define COLOR_PANEL ABGR(8, 39, 38)
 #define COLOR_GOLD ABGR(216, 179, 104)
-#define COLOR_TEXT ABGR(255, 245, 222)
 #define COLOR_DANGER ABGR(238, 83, 98)
 
 #define BOARD_COLS 7
@@ -41,11 +40,11 @@ PSP_HEAP_SIZE_KB(16 * 1024);
 static unsigned int __attribute__((aligned(16))) displayList[LIST_SIZE];
 
 static const unsigned int tileColors[5] = {
-    ABGR(238, 75, 92),    /* рубин */
-    ABGR(237, 172, 54),   /* янтарь */
-    ABGR(57, 189, 120),   /* нефрит */
-    ABGR(56, 152, 232),   /* лазурь */
-    ABGR(152, 105, 233),  /* аметист */
+    ABGR(238, 75, 92),
+    ABGR(237, 172, 54),
+    ABGR(57, 189, 120),
+    ABGR(56, 152, 232),
+    ABGR(152, 105, 233),
 };
 
 static void drawRect(float x, float y, float width, float height, unsigned int color) {
@@ -97,12 +96,10 @@ static void drawRect(float x, float y, float width, float height, unsigned int c
 static void drawBoard(int selectedRow, int selectedCol) {
     drawRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, COLOR_INK);
 
-    /* Верхняя декоративная полоса. */
     drawRect(0, 0, SCREEN_WIDTH, 4, COLOR_GOLD);
     drawRect(16, 9, 92, 3, COLOR_GOLD);
     drawRect(372, 9, 92, 3, COLOR_GOLD);
 
-    /* Панель поля. */
     drawRect(BOARD_X - 7, BOARD_Y - 7, BOARD_COLS * CELL_SIZE + 14, BOARD_ROWS * CELL_SIZE + 14, COLOR_PANEL);
     drawRect(BOARD_X - 8, BOARD_Y - 8, BOARD_COLS * CELL_SIZE + 16, 1, COLOR_GOLD);
 
@@ -115,7 +112,6 @@ static void drawBoard(int selectedRow, int selectedCol) {
         }
     }
 
-    /* Курсор. */
     float cursorX = (float)(BOARD_X + selectedCol * CELL_SIZE);
     float cursorY = (float)(BOARD_Y + selectedRow * CELL_SIZE);
     drawRect(cursorX - 1, cursorY - 1, CELL_SIZE + 2, 2, COLOR_GOLD);
@@ -123,12 +119,10 @@ static void drawBoard(int selectedRow, int selectedCol) {
     drawRect(cursorX - 1, cursorY - 1, 2, CELL_SIZE + 2, COLOR_GOLD);
     drawRect(cursorX + CELL_SIZE - 1, cursorY - 1, 2, CELL_SIZE + 2, COLOR_GOLD);
 
-    /* Три «жизни» в правом верхнем углу. */
     drawRect(432, 14, 10, 10, COLOR_DANGER);
     drawRect(447, 14, 10, 10, COLOR_DANGER);
     drawRect(462, 14, 10, 10, COLOR_DANGER);
 
-    /* Нижняя подсказка-полоска — просто визуальный маркер сборки. */
     drawRect(16, 258, 448, 1, COLOR_GOLD);
     drawRect(16, 262, 94, 2, COLOR_GOLD);
     drawRect(370, 262, 94, 2, COLOR_GOLD);
@@ -169,23 +163,34 @@ int main(int argc, char *argv[]) {
     sceCtrlSetSamplingCycle(0);
     sceCtrlSetSamplingMode(PSP_CTRL_MODE_ANALOG);
 
+    pspDebugScreenInit();
+    sceDisplaySetMode(0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    pspDebugScreenPrintf("JadePath smoke test\n");
+    pspDebugScreenPrintf("Display: %dx%d\n", SCREEN_WIDTH, SCREEN_HEIGHT);
+    pspDebugScreenPrintf("Starting GU...\n");
+    sceKernelDelayThread(3000 * 1000);
+
+    void *fbp0 = guGetStaticVramBuffer(BUF_WIDTH, SCREEN_HEIGHT, GU_PSM_8888);
+    void *fbp1 = guGetStaticVramBuffer(BUF_WIDTH, SCREEN_HEIGHT, GU_PSM_8888);
+    void *zbp = guGetStaticVramBuffer(BUF_WIDTH, SCREEN_HEIGHT, GU_PSM_4444);
+
     sceGuInit();
     sceGuStart(GU_DIRECT, displayList);
-    sceGuDrawBuffer(GU_PSM_8888, (void *)0, BUF_WIDTH);
-    sceGuDispBuffer(SCREEN_WIDTH, SCREEN_HEIGHT, (void *)0x88000, BUF_WIDTH);
-    sceGuDepthBuffer((void *)0x110000, BUF_WIDTH);
+    sceGuDrawBuffer(GU_PSM_8888, fbp0, BUF_WIDTH);
+    sceGuDispBuffer(SCREEN_WIDTH, SCREEN_HEIGHT, fbp1, BUF_WIDTH);
+    sceGuDepthBuffer(zbp, BUF_WIDTH);
     sceGuOffset(2048 - (SCREEN_WIDTH / 2), 2048 - (SCREEN_HEIGHT / 2));
     sceGuViewport(2048, 2048, SCREEN_WIDTH, SCREEN_HEIGHT);
-    sceGuDepthRange(0xC350, 0xFFFF);
+    sceGuDepthRange(0xC350, 0x2710);
     sceGuScissor(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     sceGuEnable(GU_SCISSOR_TEST);
     sceGuDisable(GU_DEPTH_TEST);
     sceGuDisable(GU_CULL_FACE);
     sceGuDisable(GU_TEXTURE_2D);
     sceGuClearColor(COLOR_INK);
-    sceGuClearDepth(0);
+    sceGuClear(GU_COLOR_BUFFER_BIT);
     sceGuFinish();
-    sceGuSync(0, 0);
+    sceGuSync(GU_SYNC_FINISH, GU_SYNC_WHAT_DONE);
 
     sceDisplayWaitVblankStart();
     sceGuDisplay(GU_TRUE);
@@ -222,7 +227,7 @@ int main(int argc, char *argv[]) {
         sceGuClear(GU_COLOR_BUFFER_BIT);
         drawBoard(selectedRow, selectedCol);
         sceGuFinish();
-        sceGuSync(0, 0);
+        sceGuSync(GU_SYNC_FINISH, GU_SYNC_WHAT_DONE);
         sceDisplayWaitVblankStart();
         sceGuSwapBuffers();
     }
