@@ -1,0 +1,39 @@
+name: Build PSP EBOOT
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build with pspdev
+        shell: bash
+        run: |
+          docker run --rm \
+            -v "${GITHUB_WORKSPACE}:/src" \
+            -w /src \
+            pspdev/pspdev:latest make
+
+      - name: Package PSP folder
+        shell: bash
+        run: |
+          mkdir -p JadePath
+          cp EBOOT.PBP JadePath/EBOOT.PBP
+          cp README-PSP.txt JadePath/README-PSP.txt
+          ls -lh JadePath
+
+      - name: Upload EBOOT artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: JadePath-PSP
+          path: JadePath
+          if-no-files-found: error
