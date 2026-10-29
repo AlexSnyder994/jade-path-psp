@@ -12,4 +12,4 @@ EXTRA_TARGETS = EBOOT.PBP
 PSP_EBOOT_TITLE = Jade Path
 
 PSPSDK = $(shell psp-config --pspsdk-path)
-include $(PSPSDK)/lib/build.mk
+include $(PSPSDK)/lib/build.mak
