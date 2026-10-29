@@ -27,7 +27,7 @@ jobs:
             || sudo apt-get install -y libreadline8 libgpgme11
 
           wget -q \
-            https://github.com/pspdev/pspdev/releases/download/v20250601/pspdev-ubuntu-latest-x86_64.tar.gz \
+            https://github.com/pspdev/pspdev/releases/download/v20230818/pspdev-ubuntu-latest.tar.gz \
             -O /tmp/pspdev.tar.gz
           sudo rm -rf /opt/pspdev
           sudo tar -xzf /tmp/pspdev.tar.gz -C /opt
