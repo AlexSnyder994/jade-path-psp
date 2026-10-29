@@ -1,4 +1,4 @@
-﻿TARGET = JadePath
+TARGET = JadePath
 OBJS = main.o
 
 CFLAGS = -G0 -O2 -Wall -Wextra -Wno-unused-parameter
