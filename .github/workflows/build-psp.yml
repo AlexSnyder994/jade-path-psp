@@ -42,7 +42,7 @@ jobs:
         shell: bash
         run: |
           export PATH="/opt/pspdev/bin:$PATH"
-          make
+          make LIBS="-lpspdisplay -lpspkernel -lm"
 
       - name: Package PSP folder
         shell: bash
