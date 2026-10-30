@@ -9,7 +9,10 @@ CFLAGS = -G0 -O2 -Wall -Wextra -Wno-unused-parameter \
          -D_PSP_FW_VERSION=600
 
 LDFLAGS = -L$(PSPSDK)/lib -L$(PSPDEV)/psp/lib
-LIBS = -lpspdisplay -lpspkernel -lm
+
+# override: the CI passes another LIBS on the command line, but the game needs
+# GU, controller and the debug text console.
+override LIBS := -lpspgu -lpspgum -lpspctrl -lpspdisplay -lpspdebug -lpspge -lpspkernel -lm
 
 all: EBOOT.PBP
 
